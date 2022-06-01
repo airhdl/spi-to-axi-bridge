@@ -33,7 +33,7 @@ Write transactions write a 32-bit data word to an AXI4-Lite register at a given 
 | 7    | `wr_data[15:8]` | `-` | Write data |
 | 8    | `wr_data[7:0]` | `-` | Write data |
 | 9    | `don't care` | `-` | a dummy byte to allow writing the data word |
-| 10    | `don't care` | `write response` | Write data |
+| 10    | `don't care` | `write response` | AXI4 write response |
 
 ### Read Data Transactions
 

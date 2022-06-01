@@ -19,7 +19,7 @@ The values for the `CPOL` and `CPHA` parameters are configured statically using 
 
 ### Write Data Transactions
 
-Write transactions write a 32-bit data word to an AXI4-Lite register at a given address. SPI write transactions have a total length of 9 bytes. The first byte, which is the `instruction` byte, must have a value of `0x00` to initiate a write transaction. It is followed by the 4 address bytes and the 4 data bytes which are all transmitted high-byte first.
+Write transactions write a 32-bit data word to an AXI4-Lite register at a given address. SPI write transactions have a total length of 11 bytes. The first byte, which is the `instruction` byte, must have a value of `0x00` to initiate a write transaction. It is followed by the 4 address bytes and the 4 data bytes which are all transmitted high-byte first.
 
 | Byte | MOSI    | MISO | Comment |
 | ---- | ------- | ---- | ------- |
@@ -32,6 +32,8 @@ Write transactions write a 32-bit data word to an AXI4-Lite register at a given 
 | 6    | `wr_data[23:16]` | `-` | Write data |
 | 7    | `wr_data[15:8]` | `-` | Write data |
 | 8    | `wr_data[7:0]` | `-` | Write data |
+| 9    | `don't care` | `-` | Write data |
+| 10    | `don't care` | `write response` | Write data |
 
 ### Read Data Transactions
 

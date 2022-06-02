@@ -23,31 +23,32 @@ Write transactions write a 32-bit data word to an AXI4-Lite register at a given 
 
 | Byte | MOSI    | MISO | Comment |
 | ---- | ------- | ---- | ------- |
-| 0    | `instruction` | `-` | Set to `0x00` for a write transaction |
-| 1    | `address[31:24]` | `-` | Write address |
-| 2    | `address[23:16]` | `-` | Write address |
-| 3    | `address[15:8]` | `-` | Write address |
-| 4    | `address[7:0]` | `-` | Write address |
-| 5    | `wr_data[31:24]` | `-` | Write data |
-| 6    | `wr_data[23:16]` | `-` | Write data |
-| 7    | `wr_data[15:8]` | `-` | Write data |
-| 8    | `wr_data[7:0]` | `-` | Write data |
-| 9    | `don't care` | `-` | a dummy byte to allow writing the data word |
-| 10    | `don't care` | `write response` | AXI4 write response |
+| 0    | `0x00` | `0x00` | Signals a write transaction |
+| 1    | `address[7:0]` | `0x00` | Write address |
+| 2    | `address[15:8]` | `0x00` | Write address |
+| 3    | `address[23:16]` | `0x00` | Write address |
+| 4    | `address[31:24]` | `0x00` | Write address |
+| 5    | `wr_data[7:0]` | `0x00` | Write data |
+| 6    | `wr_data[15:8]` | `0x00` | Write data |
+| 7    | `wr_data[23:16]` | `0x00` | Write data |
+| 8    | `wr_data[31:24]` | `0x00` | Write data |
+| 9    | `don't care` | `0x00` | A dummy byte to allow writing the data word |
+| 10    | `don't care` | `wr_resp` | `[1:0] BRESP` (AXI4 write response) |
 
 ### Read Data Transactions
 
-Read transactions read a 32-bit data word from an AXI4-Lite register at a given address. SPI read transactions have a total length of 10 bytes. The first byte, which is the `instruction` byte, must have a value of `0x01` to initiate a read transaction. It is followed by the 4 address bytes, plus a `dummy` byte which gives time to the bridge to perform the AXI4-Lite read transaction. The read data word appears on the `MISO` line following the transmission of the `dummy` byte.
+Read transactions read a 32-bit data word from an AXI4-Lite register at a given address. SPI read transactions have a total length of 11 bytes. The first byte, which is the `instruction` byte, must have a value of `0x01` to initiate a read transaction. It is followed by the 4 address bytes, plus a `dummy` byte which gives time to the bridge to perform the AXI4-Lite read transaction. The read data word appears on the `MISO` line following the transmission of the `dummy` byte.
 
 | Byte | MOSI    | MISO | Comment |
 | ---- | ------- | ---- | ------- |
-| 0    | `instruction` | `-` | Set to `0x01` for a read transaction |
-| 1    | `address[31:24]` | `-` | Read address |
-| 2    | `address[23:16]` | `-` | Read address |
-| 3    | `address[15:8]` | `-` | Read address |
-| 4    | `address[7:0]` | `-` | Read address |
-| 5    | `dummy` | `-` | a dummy byte to allow fetching the read data word |
-| 6    | `-` | `rd_data[31:24]` | Read data |
-| 7    | `-` | `rd_data[23:16]` | Read data|
-| 8    | `-` | `rd_data[15:8]` | Read data|
-| 9    | `-` | `rd_data[7:0]` | Read data|
+| 0    | `0x01` | `0x00` | Signals a read transaction |
+| 1    | `address[7:0]` | `0x00` | Read address |
+| 2    | `address[15:8]` | `0x00` | Read address |
+| 3    | `address[23:16]` | `0x00` | Read address |
+| 4    | `address[31:24]` | `0x00` | Read address |
+| 5    | `don't care` | `0x00` | A dummy byte to allow fetching the read data word |
+| 6    | `don't care` | `rd_resp` | `[1:0] RRESP` AXI4 read response |
+| 7    | `don't care` | `rd_data[7:0]` | Read data|
+| 8    | `don't care` | `rd_data[15:8]` | Read data|
+| 9    | `don't care` | `rd_data[23:16]` | Read data|
+| 10   | `don't care` | `rd_data[31:24]` | Read data |

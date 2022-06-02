@@ -4,16 +4,16 @@ An SPI to AXI4-lite bridge for interfacing `airhdl` register maps to SPI.
 
 ## SPI Modes
 
-The SPI to AXI4-Lite bridge supports all combinations of clock polarities and clock phases, as defined in the table below.
+The SPI to AXI4-Lite bridge supports different SPI modes, as defined in the table below.
 
-| Clock polarity (CPOL) | Clock Phase (CPHA) | Description |
-| --------------------- | ------------------ | ----------- |
-| 0 | 0 | Idle clock level is `0`, data captured on leading (rising) clock edge. |
-| 0 | 1 | Idle clock level is `0`, data captured on trailing (falling) clock edge |
-| 1 | 0 | Idle clock level is `1`, data captured on leading (falling) clock edge. |
-| 1 | 1 | Idle clock level is `0`, data captured on leading (falling) clock edge. |
+| Mode | Clock polarity (CPOL) | Clock Phase (CPHA) | Description |
+| -----| --------------------- | ------------------ | ----------- |
+| 0    | 0 | 0 | Idle clock level is `0`, data captured on leading (rising) clock edge. |
+| 1    | 0 | 1 | Idle clock level is `0`, data captured on trailing (falling) clock edge |
+| 2    | 1 | 0 | Idle clock level is `1`, data captured on leading (falling) clock edge. |
+| 3    | 1 | 1 | Idle clock level is `0`, data captured on leading (falling) clock edge. |
 
-The values for the `CPOL` and `CPHA` parameters are configured statically using the component's generic parameters.
+The SPI mode is configured statically using the component's `SPI_MODE` generic parameter.
 
 ## SPI Transactions
 

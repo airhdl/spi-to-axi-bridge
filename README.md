@@ -13,6 +13,8 @@ The SPI to AXI4-Lite bridge supports different SPI modes, as defined in the tabl
 | 2    | 1 | 0 | Idle clock level is `1`, data captured on leading (falling) clock edge. |
 | 3    | 1 | 1 | Idle clock level is `0`, data captured on leading (falling) clock edge. |
 
+All SPI bytes are transferred MSB-first.
+
 The SPI mode is configured statically using the component's `SPI_MODE` generic parameter.
 
 ## SPI Transactions
@@ -24,14 +26,14 @@ Write transactions write a 32-bit data word to an AXI4-Lite register at a given 
 | Byte | MOSI    | MISO | Comment |
 | ---- | ------- | ---- | ------- |
 | 0    | `0x00` | `0x00` | Signals a write transaction |
-| 1    | `address[7:0]` | `0x00` | Write address |
-| 2    | `address[15:8]` | `0x00` | Write address |
-| 3    | `address[23:16]` | `0x00` | Write address |
-| 4    | `address[31:24]` | `0x00` | Write address |
-| 5    | `wr_data[7:0]` | `0x00` | Write data |
-| 6    | `wr_data[15:8]` | `0x00` | Write data |
-| 7    | `wr_data[23:16]` | `0x00` | Write data |
-| 8    | `wr_data[31:24]` | `0x00` | Write data |
+| 1    | `address[31:24]` | `0x00` | Write address |
+| 2    | `address[23:16]` | `0x00` | Write address |
+| 3    | `address[15:8]` | `0x00` | Write address |
+| 4    | `address[7:0]` | `0x00` | Write address |
+| 5    | `wr_data[31:24]` | `0x00` | Write data |
+| 6    | `wr_data[23:16]` | `0x00` | Write data |
+| 7    | `wr_data[15:8]` | `0x00` | Write data |
+| 8    | `wr_data[7:0]` | `0x00` | Write data |
 | 9    | `don't care` | `0x00` | A dummy byte to allow writing the data word |
 | 10    | `don't care` | `wr_resp` | `[1:0] BRESP` (AXI4 write response) |
 
@@ -42,10 +44,10 @@ Read transactions read a 32-bit data word from an AXI4-Lite register at a given 
 | Byte | MOSI    | MISO | Comment |
 | ---- | ------- | ---- | ------- |
 | 0    | `0x01` | `0x00` | Signals a read transaction |
-| 1    | `address[7:0]` | `0x00` | Read address |
-| 2    | `address[15:8]` | `0x00` | Read address |
-| 3    | `address[23:16]` | `0x00` | Read address |
-| 4    | `address[31:24]` | `0x00` | Read address |
+| 1    | `address[31:24]` | `0x00` | Read address |
+| 2    | `address[23:16]` | `0x00` | Read address |
+| 3    | `address[15:8]` | `0x00` | Read address |
+| 4    | `address[7:0]` | `0x00` | Read address |
 | 5    | `don't care` | `0x00` | A dummy byte to allow fetching the read data word |
 | 6    | `don't care` | `rd_resp` | `[1:0] RRESP` AXI4 read response |
 | 7    | `don't care` | `rd_data[7:0]` | Read data|

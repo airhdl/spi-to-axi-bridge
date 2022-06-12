@@ -44,6 +44,9 @@ entity tb_spi2axi_testctrl is
     port(
         -- Record Interfaces
         SpiRec     : InOut SpiRecType;
-        Axi4SubRec : Inout AddressBusRecType
+        Axi4SubRec : Inout AddressBusRecType;
+        -- Global Signal Interface
+        Clk        : In    std_logic;
+        nReset     : In    std_logic
     );
 end entity;

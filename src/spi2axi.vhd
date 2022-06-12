@@ -308,7 +308,7 @@ begin
     axi_fsm : process(axi_aclk) is
     begin
         if rising_edge(axi_aclk) then
-            if axi_aresetn = '1' then
+            if axi_aresetn = '0' then
                 s_axi_awvalid_int <= '0';
                 s_axi_awprot      <= (others => '0');
                 s_axi_awaddr      <= (others => '0');
@@ -342,6 +342,7 @@ begin
                                 s_axi_awprot      <= (others => '0'); -- unpriviledged, secure data access
                                 s_axi_wvalid_int  <= '1';
                                 s_axi_wdata       <= spi_rx_wdata;
+                                s_axi_wstrb       <= (others => '1');
                                 axi_state         <= AXI_WRITE_ACK;
                             else
                                 s_axi_arvalid <= '1';
@@ -366,6 +367,7 @@ begin
                         --
                         if s_axi_wready = '1' then
                             s_axi_wvalid_int <= '0';
+                            s_axi_wstrb      <= (others => '0');
                             --
                             if s_axi_awvalid_int = '0' then
                                 s_axi_bready <= '1';

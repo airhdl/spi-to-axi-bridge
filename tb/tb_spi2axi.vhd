@@ -3,7 +3,9 @@
 --  SPI to AXI4-Lite Bridge Testbench
 --
 --  Description:  
---    TODO 
+--    OSVVM testbench for the SPI to AXI4-Lite Bridge component. Use SPI master verification 
+--    component (VC) to issue SPI transactions to the unit under test, and AXI4Lite subordinate 
+--    VC to emulate an AXI4 lite register bank.
 --
 --  Author(s):
 --    Guy Eschemann, guy@airhdl.com
@@ -42,7 +44,22 @@ context osvvm_axi4.Axi4LiteContext;
 entity tb_spi2axi is
 end entity tb_spi2axi;
 
-architecture test of tb_spi2axi is
+architecture TestHarness of tb_spi2axi is
+
+    -------------------------------------------------------------------------------
+    -- Components
+    -------------------------------------------------------------------------------
+
+    component tb_spi2axi_testctrl is
+        port(
+            -- Record Interfaces
+            SpiRec     : InOut SpiRecType;
+            Axi4SubRec : Inout AddressBusRecType;
+            -- Global Signal Interface
+            Clk        : In    std_logic;
+            nReset     : In    std_logic
+        );
+    end component;
 
     ------------------------------------------------------------------------------------------------
     -- Constants
@@ -106,10 +123,12 @@ begin
     -- Test controller
     ------------------------------------------------------------------------------------------------
 
-    testctrl_inst : entity work.tb_spi2axi_testctrl
+    testctrl_inst : tb_spi2axi_testctrl
         port map(
             SpiRec     => SpiRec,
-            Axi4SubRec => Axi4SubRec
+            Axi4SubRec => Axi4SubRec,
+            Clk        => axi_aclk,
+            nReset     => axi_aresetn
         );
 
     ------------------------------------------------------------------------------------------------
@@ -186,4 +205,4 @@ begin
             TransRec => Axi4SubRec
         );
 
-end architecture test;
+end architecture TestHarness;

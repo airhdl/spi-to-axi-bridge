@@ -3,8 +3,9 @@
 --  SPI to AXI4-Lite Bridge
 --
 --  Description:  
---    An SPI to AXI4-Lite Bridge that was originally developed to allow 
---    accessing register banks generated with airhdl.com over SPI.   
+--    An SPI to AXI4-Lite Bridge to allow accessing AXI4-Lite register banks 
+--    over SPI. See https://airhdl.com for a popular, web-based AXI4 register 
+--    generator.
 --
 --  Author(s):
 --    Guy Eschemann, guy@airhdl.com
@@ -107,7 +108,7 @@ architecture rtl of spi2axi is
     ------------------------------------------------------------------------------------------------
 
     -- Registered signals with initial values
-    signal spi_state         : spi_state_t                   := IDLE;
+    signal spi_state         : spi_state_t                   := SPI_RECEIVE;
     signal axi_state         : axi_state_t                   := AXI_IDLE;
     signal spi_sck_sync_old  : std_logic                     := to_std_logic(SPI_CPOL);
     signal spi_rx_shreg      : std_logic_vector(7 downto 0)  := (others => '0');
@@ -270,14 +271,16 @@ begin
                         if spi_rx_cmd = CMD_WRITE then
                             if spi_tx_byte_idx = 10 then
                                 assert axi_bresp_valid = '1' report "AXI write response not available" severity error;
-                                spi_tx_shreg <= axi_bresp;
+                                spi_tx_shreg                  <= (others => '0');
+                                spi_tx_shreg(axi_bresp'range) <= axi_bresp;
                             end if;
                         else            -- CMD_READ
                             if spi_tx_byte_idx <= 5 then
                                 null;
                             elsif spi_tx_byte_idx = 6 then
-                                assert axi_rresp_valid = '1' report "AXI read response not available" severity error;
-                                spi_tx_shreg <= axi_rresp;
+                                assert axi_rdata_valid = '1' report "AXI read response not available" severity error;
+                                spi_tx_shreg                  <= (others => '0');
+                                spi_tx_shreg(axi_rresp'range) <= axi_rresp;
                             elsif spi_tx_byte_idx = 7 then
                                 assert axi_rdata_valid = '1' report "AXI read data not available" severity error;
                                 spi_tx_shreg <= axi_rdata(31 downto 24);
@@ -322,7 +325,7 @@ begin
                 axi_rresp         <= (others => '0');
                 axi_rdata_valid   <= '0';
                 axi_rdata         <= (others => '0');
-                axi_state         <= IDLE;
+                axi_state         <= AXI_IDLE;
             else
                 case axi_state is
                     --------------------------------------------------------------------------------
@@ -399,6 +402,7 @@ begin
                             s_axi_rready    <= '0';
                             axi_rdata_valid <= '1';
                             axi_rdata       <= s_axi_rdata;
+                            axi_rresp       <= s_axi_rresp;
                             axi_state       <= AXI_IDLE;
                         end if;
 

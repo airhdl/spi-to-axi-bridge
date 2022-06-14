@@ -37,6 +37,15 @@ Write transactions write a 32-bit data word to an AXI4-Lite register at a given 
 | 9    | `don't care` | `0x00` | A dummy byte to allow writing the data word |
 | 10    | `don't care` | `wr_resp` | `[1:0] BRESP` (AXI4 write response) |
 
+Here's a list of standard AXI4 write responses:
+
+| BRESP[1:0] | Response | Description |
+| ---------- | -------- | ----------- |
+| `0b00`     | `OKAY`   | Normal access success |
+| `0b01`     | `EXOKAY` | Exclusive access success |
+| `0b10`     | `SLVERR` | Slave error |
+| `0b11`     | `DECERR` | Decode error |
+
 ### Read Data Transactions
 
 Read transactions read a 32-bit data word from an AXI4-Lite register at a given address. SPI read transactions have a total length of 11 bytes. The first byte, which is the `instruction` byte, must have a value of `0x01` to initiate a read transaction. It is followed by the 4 address bytes, plus a `dummy` byte which gives time to the bridge to perform the AXI4-Lite read transaction. The read data word appears on the `MISO` line following the transmission of the `dummy` byte.

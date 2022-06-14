@@ -54,7 +54,7 @@ architecture TestHarness of tb_spi2axi is
         port(
             -- Record Interfaces
             SpiRec     : InOut SpiRecType;
-            Axi4SubRec : Inout AddressBusRecType;
+            Axi4MemRec : Inout AddressBusRecType;
             -- Global Signal Interface
             Clk        : In    std_logic;
             nReset     : In    std_logic
@@ -83,7 +83,7 @@ architecture TestHarness of tb_spi2axi is
         ReadAddress(Addr(AXI_ADDR_WIDTH - 1 downto 0)),
         ReadData(Data(AXI_DATA_WIDTH - 1 downto 0))
     );
-    signal Axi4SubRec  : AddressBusRecType(
+    signal Axi4MemRec  : AddressBusRecType(
         Address(AXI_ADDR_WIDTH - 1 downto 0),
         DataToModel(AXI_DATA_WIDTH - 1 downto 0),
         DataFromModel(AXI_DATA_WIDTH - 1 downto 0)
@@ -126,7 +126,7 @@ begin
     testctrl_inst : tb_spi2axi_testctrl
         port map(
             SpiRec     => SpiRec,
-            Axi4SubRec => Axi4SubRec,
+            Axi4MemRec => Axi4MemRec,
             Clk        => axi_aclk,
             nReset     => axi_aresetn
         );
@@ -190,9 +190,25 @@ begin
     -- AXI4 lite subordinate verification component
     ------------------------------------------------------------------------------------------------
 
-    axi4lite_sub_inst : entity osvvm_axi4.Axi4LiteSubordinate
+    --    axi4lite_sub_inst : entity osvvm_axi4.Axi4LiteSubordinate
+    --        generic map(
+    --            MODEL_ID_NAME => "AXI4 subordinate",
+    --            tperiod_Clk   => AXI_CLK_PERIOD
+    --        )
+    --        port map(
+    --            -- Globals
+    --            Clk      => axi_aclk,
+    --            nReset   => axi_aresetn,
+    --            -- AXI Manager Functional Interface
+    --            AxiBus   => Axi4LiteBus,
+    --            -- Testbench Transaction Interface
+    --            TransRec => Axi4SubRec
+    --        );
+
+    axi4lite_memory_inst : entity osvvm_axi4.Axi4LiteMemory
         generic map(
-            MODEL_ID_NAME => "AXI4 subordinate",
+            MODEL_ID_NAME => "Axi4LiteMemory",
+            MEMORY_NAME   => "Axi4LiteMemory",
             tperiod_Clk   => AXI_CLK_PERIOD
         )
         port map(
@@ -202,7 +218,7 @@ begin
             -- AXI Manager Functional Interface
             AxiBus   => Axi4LiteBus,
             -- Testbench Transaction Interface
-            TransRec => Axi4SubRec
+            TransRec => Axi4MemRec
         );
 
 end architecture TestHarness;

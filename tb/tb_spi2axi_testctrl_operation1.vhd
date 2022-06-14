@@ -61,6 +61,7 @@ begin
         variable value           : natural;
         variable spi_tx_bytes    : integer_vector(0 to 10);
         variable spi_tx_byte_idx : natural;
+        variable mem_reg         : std_logic_vector(31 downto 0);
     begin
         -- Initialization of test
         SetAlertLogName("tb_spi2axi_operation1");
@@ -98,6 +99,12 @@ begin
         PushBurst(TxBurstFifo, spi_tx_bytes, 8); -- AXI4 write response
         SendBurst(SpiRec, spi_tx_byte_idx);
 
+        wait for 100 us;
+
+        Read(Axi4MemRec, std_logic_vector(addr), mem_reg);
+        
+        AffirmIfEqual(mem_reg, std_logic_vector(wdata), "Memory data: ") ;
+
         -- Wait for test to finish
         WaitForBarrier(TestDone, 10 ms);
         AlertIf(now >= 10 ms, "Test finished due to timeout");
@@ -105,8 +112,9 @@ begin
 
         TranscriptClose;
 
-        EndOfTestReports(ExternalErrors => (FAILURE => 0, ERROR => -15, WARNING => 0));
-        std.env.stop(SumAlertCount(GetAlertCount + (FAILURE => 0, ERROR => -15, WARNING => 0)));
+        --EndOfTestReports(ExternalErrors => (FAILURE => 0, ERROR => -15, WARNING => 0));
+        EndOfTestReports;
+        std.env.stop; -- (SumAlertCount(GetAlertCount + (FAILURE => 0, ERROR => -15, WARNING => 0)));
         wait;
     end process ControlProc;
 

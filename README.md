@@ -31,16 +31,16 @@ Write transactions write a 32-bit data word to an AXI4-Lite register at a given 
 | Byte | MOSI    | MISO | Comment |
 | ---- | ------- | ---- | ------- |
 | 0    | `0x00` | `0x00` | Signals a write transaction |
-| 1    | `address[31:24]` | `0x00` | Write address |
+| 1    | `address[31:24]` | `0x00` | Write address (high byte) |
 | 2    | `address[23:16]` | `0x00` | Write address |
 | 3    | `address[15:8]` | `0x00` | Write address |
-| 4    | `address[7:0]` | `0x00` | Write address |
+| 4    | `address[7:0]` | `0x00` | Write address (low byte) |
 | 5    | `wr_data[31:24]` | `0x00` | Write data |
 | 6    | `wr_data[23:16]` | `0x00` | Write data |
 | 7    | `wr_data[15:8]` | `0x00` | Write data |
 | 8    | `wr_data[7:0]` | `0x00` | Write data |
 | 9    | `don't care` | `0x00` | A dummy byte to allow writing the data word |
-| 10    | `don't care` | `status` | `[2] timeout` a timeout occurred while waiting for the write response<br />`[1:0] BRESP` AXI4 write reponse, only valid when `timeout = 0` |
+| 10    | `don't care` | `status` | `[2] timeout` a timeout occurred while waiting for the write response<br />`[1:0] BRESP` AXI4 write reponse (only valid when `timeout = 0`) |
 
 AXI4 write response codes:
 
@@ -58,16 +58,16 @@ Read transactions read a 32-bit data word from an AXI4-Lite register at a given 
 | Byte | MOSI    | MISO | Comment |
 | ---- | ------- | ---- | ------- |
 | 0    | `0x01` | `0x00` | Signals a read transaction |
-| 1    | `address[31:24]` | `0x00` | Read address |
+| 1    | `address[31:24]` | `0x00` | Read address (high byte) |
 | 2    | `address[23:16]` | `0x00` | Read address |
 | 3    | `address[15:8]` | `0x00` | Read address |
-| 4    | `address[7:0]` | `0x00` | Read address |
+| 4    | `address[7:0]` | `0x00` | Read address (low byte) |
 | 5    | `don't care` | `0x00` | A dummy byte to allow fetching the read data word |
 | 6    | `don't care` | `rd_data[31:24]` | Read data (only valid when `status[2:0] is 0b000`) |
 | 7    | `don't care` | `rd_data[23:16]` | Read data (ditto) |
 | 8    | `don't care` | `rd_data[15:8]` | Read data (ditto) |
 | 9    | `don't care` | `rd_data[7:0]` | Read data (ditto) |
-| 10   | `don't care` | `status` | `[2] timeout` a timeout occurred while waiting for the read response<br />`[1:0] RRESP` AXI4 read response, only valid when `timeout = 0` |
+| 10   | `don't care` | `status` | `[2] timeout` a timeout occurred while waiting for the read response<br />`[1:0] RRESP` AXI4 read response (only valid when `timeout = 0`) |
 
 AXI4 read response codes:
 

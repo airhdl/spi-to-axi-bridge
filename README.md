@@ -17,9 +17,10 @@ The SPI to AXI4-Lite bridge supports different SPI modes, as defined in the tabl
 | 2    | 1 | 0 | Idle clock level is `1`, data captured on leading (falling) clock edge. |
 | 3    | 1 | 1 | Idle clock level is `0`, data captured on leading (falling) clock edge. |
 
-All SPI bytes are transferred MSB-first.
+Notes:
 
-The SPI mode is configured statically using the component's `SPI_MODE` generic parameter.
+* All SPI bytes are transferred MSB-first.
+* The SPI mode is configured statically using the component's `SPI_CPOL` and `SPI_CPHA` generic parameters.
 
 ## SPI Transactions
 
@@ -39,7 +40,7 @@ Write transactions write a 32-bit data word to an AXI4-Lite register at a given 
 | 7    | `wr_data[15:8]` | `0x00` | Write data |
 | 8    | `wr_data[7:0]` | `0x00` | Write data |
 | 9    | `don't care` | `0x00` | A dummy byte to allow writing the data word |
-| 10    | `don't care` | `status` | `[2] timeout` a timeout occurred while waiting for the write response<br />`[1:0] BRESP` (AXI4 write reponse, only valid when `timeout = 0` |
+| 10    | `don't care` | `status` | `[2] timeout` a timeout occurred while waiting for the write response<br />`[1:0] BRESP` AXI4 write reponse, only valid when `timeout = 0` |
 
 AXI4 write response codes:
 
@@ -62,7 +63,7 @@ Read transactions read a 32-bit data word from an AXI4-Lite register at a given 
 | 3    | `address[15:8]` | `0x00` | Read address |
 | 4    | `address[7:0]` | `0x00` | Read address |
 | 5    | `don't care` | `0x00` | A dummy byte to allow fetching the read data word |
-| 6    | `don't care` | `status` | `[2] timeout` a timeout occurred while waiting for the read response<br />`[1:0] RRESP` (AXI4 read response, only valid when `timeout = 0`) |
+| 6    | `don't care` | `status` | `[2] timeout` a timeout occurred while waiting for the read response<br />`[1:0] RRESP` AXI4 read response, only valid when `timeout = 0` |
 | 7    | `don't care` | `rd_data[31:24]` | Read data|
 | 8    | `don't care` | `rd_data[23:16]` | Read data|
 | 9    | `don't care` | `rd_data[15:8]` | Read data|

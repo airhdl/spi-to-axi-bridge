@@ -47,6 +47,7 @@ architecture operation1 of tb_spi2axi_testctrl is
     -------------------------------------------------------------------------------
 
     alias TxBurstFifo : ScoreboardIdType is SpiRec.BurstFifo;
+    alias RxBurstFifo : ScoreboardIdType is SpiRec.BurstFifo;
 
 begin
 
@@ -56,12 +57,16 @@ begin
     ------------------------------------------------------------
     ControlProc : process
         variable addr            : unsigned(31 downto 0);
-        variable wdata           : unsigned(31 downto 0);
-        variable rdata           : unsigned(31 downto 0);
+        variable wdata           : std_logic_vector(31 downto 0);
+        variable rdata           : std_logic_vector(31 downto 0);
         variable value           : natural;
         variable spi_tx_bytes    : integer_vector(0 to 10);
         variable spi_tx_byte_idx : natural;
         variable mem_reg         : std_logic_vector(31 downto 0);
+        variable num_bytes       : integer;
+        variable valid           : boolean;
+        variable rx_byte         : std_logic_vector(7 downto 0);
+        variable bytes_to_send   : integer;
     begin
         -- Initialization of test
         SetAlertLogName("tb_spi2axi_operation1");
@@ -78,32 +83,77 @@ begin
         wait until nReset = '1';
         ClearAlerts;
 
-        Log("Send SPI data...");
+        Log("Testing SPI register write");
         spi_tx_byte_idx               := 0;
         spi_tx_bytes(spi_tx_byte_idx) := 0; -- 0x00 -> SPI write
         spi_tx_byte_idx               := spi_tx_byte_idx + 1;
         addr                          := x"76543210";
         wdata                         := x"12345678";
+        Log("SPI WR: addr = 0x" & to_hxstring(addr) & ", data = 0x" & to_hxstring(wdata));
         for i in 3 downto 0 loop
             spi_tx_bytes(spi_tx_byte_idx) := to_integer(addr(i * 8 + 7 downto i * 8));
             spi_tx_byte_idx               := spi_tx_byte_idx + 1;
         end loop;
         for i in 3 downto 0 loop
-            spi_tx_bytes(spi_tx_byte_idx) := to_integer(wdata(i * 8 + 7 downto i * 8));
+            spi_tx_bytes(spi_tx_byte_idx) := to_integer(unsigned(wdata(i * 8 + 7 downto i * 8)));
             spi_tx_byte_idx               := spi_tx_byte_idx + 1;
         end loop;
         spi_tx_bytes(spi_tx_byte_idx) := 0; -- a dummy byte to allow writing the data word
         spi_tx_byte_idx               := spi_tx_byte_idx + 1;
         spi_tx_bytes(spi_tx_byte_idx) := 0; -- AXI4 write response
         spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        PushBurst(TxBurstFifo, spi_tx_bytes, 8); -- AXI4 write response
+        PushBurst(TxBurstFifo, spi_tx_bytes, 8);
         SendBurst(SpiRec, spi_tx_byte_idx);
 
         wait for 100 us;
 
+        -- Get received data
+        GetBurst(SpiRec, num_bytes);
+        AffirmIfEqual(num_bytes, 11);
+        for i in 0 to num_bytes - 1 loop
+            PopWord(RxBurstFifo, valid, rx_byte, bytes_to_send);
+            AlertIfNot(valid, "invalid receive data");
+            Log("RX byte: " & to_string(rx_byte));
+        end loop;
+
         Read(Axi4MemRec, std_logic_vector(addr), mem_reg);
-        
-        AffirmIfEqual(mem_reg, std_logic_vector(wdata), "Memory data: ") ;
+        AffirmIfEqual(mem_reg, wdata, "Memory data: ");
+
+        Log("Testing SPI register read");
+        spi_tx_byte_idx               := 0;
+        spi_tx_bytes(spi_tx_byte_idx) := 1; -- 0x01 -> SPI read
+        spi_tx_byte_idx               := spi_tx_byte_idx + 1;
+        addr                          := x"76543210";
+        Log("SPI RD: addr = 0x" & to_hxstring(addr));
+        for i in 3 downto 0 loop
+            spi_tx_bytes(spi_tx_byte_idx) := to_integer(addr(i * 8 + 7 downto i * 8));
+            spi_tx_byte_idx               := spi_tx_byte_idx + 1;
+        end loop;
+        for i in 0 to 5 loop
+            spi_tx_bytes(spi_tx_byte_idx) := 0; -- don't care
+            spi_tx_byte_idx               := spi_tx_byte_idx + 1;
+        end loop;
+        PushBurst(TxBurstFifo, spi_tx_bytes, 8);
+        SendBurst(SpiRec, spi_tx_byte_idx);
+
+        -- Get received data
+        GetBurst(SpiRec, num_bytes);
+        AffirmIfEqual(num_bytes, 11);
+        for i in 0 to num_bytes - 1 loop
+            PopWord(RxBurstFifo, valid, rx_byte, bytes_to_send);
+            AlertIfNot(valid, "invalid receive data");
+            Log("RX byte: " & to_string(rx_byte));
+            if i = 7 then
+                rdata(31 downto 24) := rx_byte;
+            elsif i = 8 then
+                rdata(23 downto 16) := rx_byte;
+            elsif i = 9 then
+                rdata(15 downto 8) := rx_byte;
+            elsif i = 10 then
+                rdata(7 downto 0) := rx_byte;
+            end if;
+        end loop;
+        AffirmIfEqual(rdata, wdata, "SPI read error");
 
         -- Wait for test to finish
         WaitForBarrier(TestDone, 10 ms);
@@ -114,7 +164,7 @@ begin
 
         --EndOfTestReports(ExternalErrors => (FAILURE => 0, ERROR => -15, WARNING => 0));
         EndOfTestReports;
-        std.env.stop; -- (SumAlertCount(GetAlertCount + (FAILURE => 0, ERROR => -15, WARNING => 0)));
+        std.env.stop;                   -- (SumAlertCount(GetAlertCount + (FAILURE => 0, ERROR => -15, WARNING => 0)));
         wait;
     end process ControlProc;
 

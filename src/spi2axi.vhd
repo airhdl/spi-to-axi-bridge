@@ -225,6 +225,8 @@ begin
                         else
                             spi_rx_bit_idx  := 0;
                             spi_rx_byte_idx := 0;
+                            spi_tx_bit_idx  := 0;
+                            spi_tx_byte_idx := 0;
                         end if;
 
                     ------------------------------------------------------------------------------------
@@ -270,17 +272,25 @@ begin
                     when SPI_LOAD_TX_BYTE =>
                         if spi_rx_cmd = CMD_WRITE then
                             if spi_tx_byte_idx = 10 then
-                                assert axi_bresp_valid = '1' report "AXI write response not available" severity error;
+                                -- Write status byte:
+                                -- [7:3] reserved
+                                -- [2]   timeout
+                                -- [1:0] BRESP                                
                                 spi_tx_shreg                  <= (others => '0');
+                                spi_tx_shreg(2)               <= not axi_bresp_valid;
                                 spi_tx_shreg(axi_bresp'range) <= axi_bresp;
                             end if;
                         else            -- CMD_READ
                             if spi_tx_byte_idx <= 5 then
                                 null;
                             elsif spi_tx_byte_idx = 6 then
-                                assert axi_rdata_valid = '1' report "AXI read response not available" severity error;
-                                spi_tx_shreg                  <= (others => '0');
-                                spi_tx_shreg(axi_rresp'range) <= axi_rresp;
+                                -- Read status byte:
+                                -- [7:3] reserved
+                                -- [2]   timeout
+                                -- [1:0] RRESP
+                                spi_tx_shreg             <= (others => '0');
+                                spi_tx_shreg(2)          <= not axi_rdata_valid;
+                                spi_tx_shreg(1 downto 0) <= axi_rresp;
                             elsif spi_tx_byte_idx = 7 then
                                 assert axi_rdata_valid = '1' report "AXI read data not available" severity error;
                                 spi_tx_shreg <= axi_rdata(31 downto 24);

@@ -124,6 +124,7 @@ architecture rtl of spi2axi is
     signal spi_rx_valid      : std_logic                     := '0';
     signal s_axi_awvalid_int : std_logic                     := '0';
     signal s_axi_wvalid_int  : std_logic                     := '0';
+    signal axi_fsm_reset     : std_logic                     := '1';
 
     -- Unregistered signals
     signal spi_sck_sync  : std_logic;
@@ -183,6 +184,7 @@ begin
                 spi_rx_wdata     <= (others => '0');
                 spi_rx_shreg     <= (others => '0');
                 spi_tx_shreg     <= (others => '0');
+                axi_fsm_reset    <= '1';
                 spi_state        <= SPI_RECEIVE;
             else
                 -- defaults:
@@ -200,6 +202,8 @@ begin
                     ------------------------------------------------------------------------------------
                     when SPI_RECEIVE =>
                         if spi_ss_n_sync = '0' then
+                            axi_fsm_reset <= '0';
+                            --
                             -- SPI clock leading edge
                             if spi_sck_sync = '1' and spi_sck_sync_old = '0' then
                                 spi_rx_shreg <= spi_rx_shreg(spi_rx_shreg'high - 1 downto 0) & spi_mosi; -- assuming `spi_mosi` is steady and does not need a synchronizer
@@ -227,6 +231,7 @@ begin
                             spi_rx_byte_idx := 0;
                             spi_tx_bit_idx  := 0;
                             spi_tx_byte_idx := 0;
+                            axi_fsm_reset   <= '1';
                         end if;
 
                     ------------------------------------------------------------------------------------
@@ -284,6 +289,14 @@ begin
                             if spi_tx_byte_idx <= 5 then
                                 null;
                             elsif spi_tx_byte_idx = 6 then
+                                spi_tx_shreg <= axi_rdata(31 downto 24);
+                            elsif spi_tx_byte_idx = 7 then
+                                spi_tx_shreg <= axi_rdata(23 downto 16);
+                            elsif spi_tx_byte_idx = 8 then
+                                spi_tx_shreg <= axi_rdata(15 downto 8);
+                            elsif spi_tx_byte_idx = 9 then
+                                spi_tx_shreg <= axi_rdata(7 downto 0);
+                            else
                                 -- Read status byte:
                                 -- [7:3] reserved
                                 -- [2]   timeout
@@ -291,15 +304,6 @@ begin
                                 spi_tx_shreg             <= (others => '0');
                                 spi_tx_shreg(2)          <= not axi_rdata_valid;
                                 spi_tx_shreg(1 downto 0) <= axi_rresp;
-                            elsif spi_tx_byte_idx = 7 then
-                                assert axi_rdata_valid = '1' report "AXI read data not available" severity error;
-                                spi_tx_shreg <= axi_rdata(31 downto 24);
-                            elsif spi_tx_byte_idx = 8 then
-                                spi_tx_shreg <= axi_rdata(23 downto 16);
-                            elsif spi_tx_byte_idx = 9 then
-                                spi_tx_shreg <= axi_rdata(15 downto 8);
-                            else
-                                spi_tx_shreg <= axi_rdata(7 downto 0);
                             end if;
                         end if;
                         --
@@ -318,7 +322,7 @@ begin
     axi_fsm : process(axi_aclk) is
     begin
         if rising_edge(axi_aclk) then
-            if axi_aresetn = '0' then
+            if axi_aresetn = '0' or axi_fsm_reset = '1' then
                 s_axi_awvalid_int <= '0';
                 s_axi_awprot      <= (others => '0');
                 s_axi_awaddr      <= (others => '0');

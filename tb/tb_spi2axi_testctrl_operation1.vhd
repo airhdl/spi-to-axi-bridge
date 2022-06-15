@@ -34,13 +34,16 @@ library OSVVM;
 context OSVVM.OsvvmContext;
 use osvvm.ScoreboardPkg_slv.all;
 
+library osvvm_axi4;
+use osvvm_axi4.Axi4OptionsPkg.all;
+
 architecture operation1 of tb_spi2axi_testctrl is
 
     -------------------------------------------------------------------------------
-    -- Signals
+    -- Constants
     -------------------------------------------------------------------------------
 
-    signal TestDone : integer_barrier := 1;
+    constant SPI_PACKET_LENGTH_BYTES : natural := 11;
 
     -------------------------------------------------------------------------------
     -- Aliases
@@ -56,115 +59,163 @@ begin
     --   Set up AlertLog and wait for end of test
     ------------------------------------------------------------
     ControlProc : process
-        variable addr            : unsigned(31 downto 0);
-        variable wdata           : std_logic_vector(31 downto 0);
-        variable rdata           : std_logic_vector(31 downto 0);
-        variable value           : natural;
-        variable spi_tx_bytes    : integer_vector(0 to 10);
-        variable spi_tx_byte_idx : natural;
-        variable mem_reg         : std_logic_vector(31 downto 0);
-        variable num_bytes       : integer;
-        variable valid           : boolean;
-        variable rx_byte         : std_logic_vector(7 downto 0);
-        variable bytes_to_send   : integer;
+        procedure spi_process(tx_bytes : integer_vector; rx_bytes : out integer_vector) is
+            variable num_bytes     : integer;
+            variable valid         : boolean;
+            variable rx_byte       : std_logic_vector(7 downto 0);
+            variable bytes_to_send : integer;
+        begin
+            -- Push TX bytes to SPI VC
+            PushBurst(TxBurstFifo, tx_bytes, 8);
+            SendBurst(SpiRec, tx_bytes'length);
+
+            -- Fetch RX bytes from SPI VC
+            GetBurst(SpiRec, num_bytes);
+            AlertIfNot(num_bytes = 11, "unexpected number of received bytes");
+            for i in 0 to num_bytes - 1 loop
+                PopWord(RxBurstFifo, valid, rx_byte, bytes_to_send);
+                AlertIfNot(valid, "invalid receive data");
+                Log("RX byte: " & to_string(rx_byte), DEBUG);
+                rx_bytes(i) := to_integer(unsigned(rx_byte));
+            end loop;
+        end procedure;
+
+        -- Write an AXI4 register over SPI
+        procedure spi_write(addr : unsigned(31 downto 0); data : std_logic_vector(31 downto 0); status : out std_logic_vector(7 downto 0)) is
+            variable tx_bytes    : integer_vector(0 to SPI_PACKET_LENGTH_BYTES - 1);
+            variable rx_bytes    : integer_vector(0 to SPI_PACKET_LENGTH_BYTES - 1);
+            variable tx_byte_idx : natural;
+        begin
+            Log("SPI Write: addr = 0x" & to_hxstring(addr) & ", data = 0x" & to_hxstring(data), DEBUG);
+            tx_byte_idx           := 0;
+            tx_bytes(tx_byte_idx) := 0; -- write
+            tx_byte_idx           := tx_byte_idx + 1;
+            for i in 3 downto 0 loop
+                tx_bytes(tx_byte_idx) := to_integer(addr(i * 8 + 7 downto i * 8));
+                tx_byte_idx           := tx_byte_idx + 1;
+            end loop;
+            for i in 3 downto 0 loop
+                tx_bytes(tx_byte_idx) := to_integer(unsigned(data(i * 8 + 7 downto i * 8)));
+                tx_byte_idx           := tx_byte_idx + 1;
+            end loop;
+            tx_bytes(tx_byte_idx) := 0; -- a dummy byte to allow writing the data word
+            tx_byte_idx           := tx_byte_idx + 1;
+            tx_bytes(tx_byte_idx) := 0; -- AXI4 write response
+            tx_byte_idx           := tx_byte_idx + 1;
+            assert tx_byte_idx = tx_bytes'length severity failure;
+            --
+            spi_process(tx_bytes, rx_bytes);
+            status                := std_logic_vector(to_unsigned(rx_bytes(10), 8));
+        end procedure;
+
+        -- Read an AXI4 register over SPI
+        procedure spi_read(addr : unsigned(31 downto 0); data : out std_logic_vector(31 downto 0); status : out std_logic_vector(7 downto 0)) is
+            variable tx_bytes    : integer_vector(0 to SPI_PACKET_LENGTH_BYTES - 1);
+            variable rx_bytes    : integer_vector(0 to SPI_PACKET_LENGTH_BYTES - 1);
+            variable tx_byte_idx : natural;
+        begin
+            Log("SPI Write: addr = 0x" & to_hxstring(addr) & ", data = 0x" & to_hxstring(data), DEBUG);
+            tx_byte_idx           := 0;
+            tx_bytes(tx_byte_idx) := 1; -- read
+            tx_byte_idx           := tx_byte_idx + 1;
+            for i in 3 downto 0 loop
+                tx_bytes(tx_byte_idx) := to_integer(addr(i * 8 + 7 downto i * 8));
+                tx_byte_idx           := tx_byte_idx + 1;
+            end loop;
+            for i in 0 to 5 loop
+                tx_bytes(tx_byte_idx) := 0; -- don't care
+                tx_byte_idx           := tx_byte_idx + 1;
+            end loop;
+            assert tx_byte_idx = tx_bytes'length severity failure;
+            --
+            spi_process(tx_bytes, rx_bytes);
+            data(31 downto 24) := std_logic_vector(to_unsigned(rx_bytes(6), 8));
+            data(23 downto 16) := std_logic_vector(to_unsigned(rx_bytes(7), 8));
+            data(15 downto 8)  := std_logic_vector(to_unsigned(rx_bytes(8), 8));
+            data(7 downto 0)   := std_logic_vector(to_unsigned(rx_bytes(9), 8));
+            status             := std_logic_vector(to_unsigned(rx_bytes(10), 8));
+        end procedure;
+
+        variable addr     : unsigned(31 downto 0);
+        variable wdata    : std_logic_vector(31 downto 0);
+        variable rdata    : std_logic_vector(31 downto 0);
+        variable value    : natural;
+        variable mem_reg  : std_logic_vector(31 downto 0);
+        variable rx_bytes : integer_vector(0 to SPI_PACKET_LENGTH_BYTES - 1);
+        variable status   : std_logic_vector(7 downto 0);
+
+        alias s_axi_awvalid_mask is << signal .tb_spi2axi.s_axi_awvalid_mask : std_logic >>;
+        alias s_axi_arvalid_mask is << signal .tb_spi2axi.s_axi_arvalid_mask : std_logic >>;
+
     begin
         -- Initialization of test
         SetAlertLogName("tb_spi2axi_operation1");
         SetLogEnable(INFO, TRUE);
-        SetLogEnable(DEBUG, TRUE);
-        SetLogEnable(PASSED, TRUE);     -- Enable PASSED logs
+        SetLogEnable(DEBUG, FALSE);
+        SetLogEnable(PASSED, FALSE);
+        SetLogEnable(FindAlertLogID("Axi4LiteMemory"), INFO, FALSE, TRUE);
 
         -- Wait for testbench initialization 
         wait for 0 ns;
-        wait for 0 ns;
-        --TranscriptOpen(OSVVM_RESULTS_DIR & "tb_spi2axi_operation1.txt");
 
         -- Wait for Design Reset
         wait until nReset = '1';
         ClearAlerts;
 
-        Log("Testing SPI register write");
-        spi_tx_byte_idx               := 0;
-        spi_tx_bytes(spi_tx_byte_idx) := 0; -- 0x00 -> SPI write
-        spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        addr                          := x"76543210";
-        wdata                         := x"12345678";
-        Log("SPI WR: addr = 0x" & to_hxstring(addr) & ", data = 0x" & to_hxstring(wdata));
-        for i in 3 downto 0 loop
-            spi_tx_bytes(spi_tx_byte_idx) := to_integer(addr(i * 8 + 7 downto i * 8));
-            spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        end loop;
-        for i in 3 downto 0 loop
-            spi_tx_bytes(spi_tx_byte_idx) := to_integer(unsigned(wdata(i * 8 + 7 downto i * 8)));
-            spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        end loop;
-        spi_tx_bytes(spi_tx_byte_idx) := 0; -- a dummy byte to allow writing the data word
-        spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        spi_tx_bytes(spi_tx_byte_idx) := 0; -- AXI4 write response
-        spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        PushBurst(TxBurstFifo, spi_tx_bytes, 8);
-        SendBurst(SpiRec, spi_tx_byte_idx);
-
-        wait for 100 us;
-
-        -- Get received data
-        GetBurst(SpiRec, num_bytes);
-        AffirmIfEqual(num_bytes, 11);
-        for i in 0 to num_bytes - 1 loop
-            PopWord(RxBurstFifo, valid, rx_byte, bytes_to_send);
-            AlertIfNot(valid, "invalid receive data");
-            Log("RX byte: " & to_string(rx_byte));
-        end loop;
+        Log("Testing normal SPI write");
+        addr  := x"76543210";
+        wdata := x"12345678";
+        spi_write(addr, wdata, status);
+        AlertIf(status(2) /= '0', "unexpected timeout");
+        AlertIf(status(1 downto 0) /= "00", "unexpected write response");
 
         Read(Axi4MemRec, std_logic_vector(addr), mem_reg);
-        AffirmIfEqual(mem_reg, wdata, "Memory data: ");
+        AffirmIfEqual(mem_reg, wdata, "Memory data word: ");
 
-        Log("Testing SPI register read");
-        spi_tx_byte_idx               := 0;
-        spi_tx_bytes(spi_tx_byte_idx) := 1; -- 0x01 -> SPI read
-        spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        addr                          := x"76543210";
-        Log("SPI RD: addr = 0x" & to_hxstring(addr));
-        for i in 3 downto 0 loop
-            spi_tx_bytes(spi_tx_byte_idx) := to_integer(addr(i * 8 + 7 downto i * 8));
-            spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        end loop;
-        for i in 0 to 5 loop
-            spi_tx_bytes(spi_tx_byte_idx) := 0; -- don't care
-            spi_tx_byte_idx               := spi_tx_byte_idx + 1;
-        end loop;
-        PushBurst(TxBurstFifo, spi_tx_bytes, 8);
-        SendBurst(SpiRec, spi_tx_byte_idx);
+        Log("Testing SPI write with SLVERR response");
+        addr  := x"76543210";
+        wdata := x"12345678";
+        SetAxi4Options(Axi4MemRec, BRESP, 2); -- SLVERR
+        spi_write(addr, wdata, status);
+        AlertIf(status(2) /= '0', "unexpected timeout");
+        AlertIf(status(1 downto 0) /= "10", "unexpected write response");
+        SetAxi4Options(Axi4MemRec, BRESP, 0);
 
-        -- Get received data
-        GetBurst(SpiRec, num_bytes);
-        AffirmIfEqual(num_bytes, 11);
-        for i in 0 to num_bytes - 1 loop
-            PopWord(RxBurstFifo, valid, rx_byte, bytes_to_send);
-            AlertIfNot(valid, "invalid receive data");
-            Log("RX byte: " & to_string(rx_byte));
-            if i = 7 then
-                rdata(31 downto 24) := rx_byte;
-            elsif i = 8 then
-                rdata(23 downto 16) := rx_byte;
-            elsif i = 9 then
-                rdata(15 downto 8) := rx_byte;
-            elsif i = 10 then
-                rdata(7 downto 0) := rx_byte;
-            end if;
-        end loop;
-        AffirmIfEqual(rdata, wdata, "SPI read error");
+        Log("Testing SPI write timeout");
+        s_axi_awvalid_mask <= force '0';
+        addr               := x"76543210";
+        wdata              := x"12345678";
+        spi_write(addr, wdata, status);
+        AffirmIfEqual('1', status(2), "timeout");
+        s_axi_awvalid_mask <= release;
 
-        -- Wait for test to finish
-        WaitForBarrier(TestDone, 10 ms);
-        AlertIf(now >= 10 ms, "Test finished due to timeout");
-        AlertIf(GetAffirmCount < 1, "Test is not Self-Checking");
+        Log("Testing normal SPI read");
+        addr  := x"12345678";
+        wdata := x"12345678";
+        Write(Axi4MemRec, std_logic_vector(addr), wdata);
+        spi_read(addr, rdata, status);
+        AffirmIfEqual(rdata, wdata, "read data");
+        AffirmIfEqual('0', status(2), "timeout");
+        AffirmIfEqual("00", status(1 downto 0), "read response");
 
-        TranscriptClose;
+        Log("Testing SPI read with DECERR response");
+        addr  := x"12345678";
+        wdata := x"12345678";
+        SetAxi4Options(Axi4MemRec, RRESP, 3); -- DECERR
+        spi_read(addr, rdata, status);
+        AffirmIfEqual(rdata, wdata, "read data");
+        AffirmIfEqual('0', status(2), "timeout");
+        AffirmIfEqual("11", status(1 downto 0), "read response");
+        SetAxi4Options(Axi4MemRec, RRESP, 0);
 
-        --EndOfTestReports(ExternalErrors => (FAILURE => 0, ERROR => -15, WARNING => 0));
+        Log("Testing SPI read timeout");
+        s_axi_arvalid_mask <= force '0';
+        spi_read(addr, rdata, status);
+        AffirmIfEqual('1', status(2), "timeout");
+        s_axi_arvalid_mask <= release;
+
         EndOfTestReports;
-        std.env.stop;                   -- (SumAlertCount(GetAlertCount + (FAILURE => 0, ERROR => -15, WARNING => 0)));
+        std.env.stop;
         wait;
     end process ControlProc;
 

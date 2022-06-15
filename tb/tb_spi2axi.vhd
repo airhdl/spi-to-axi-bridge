@@ -77,24 +77,28 @@ architecture TestHarness of tb_spi2axi is
     -- Signals
     ------------------------------------------------------------------------------------------------
 
-    signal Axi4LiteBus : Axi4LiteRecType(
+    signal Axi4LiteBus        : Axi4LiteRecType(
         WriteAddress(Addr(AXI_ADDR_WIDTH - 1 downto 0)),
         WriteData(Data(AXI_DATA_WIDTH - 1 downto 0), Strb(AXI_STRB_WIDTH - 1 downto 0)),
         ReadAddress(Addr(AXI_ADDR_WIDTH - 1 downto 0)),
         ReadData(Data(AXI_DATA_WIDTH - 1 downto 0))
     );
-    signal Axi4MemRec  : AddressBusRecType(
+    signal Axi4MemRec         : AddressBusRecType(
         Address(AXI_ADDR_WIDTH - 1 downto 0),
         DataToModel(AXI_DATA_WIDTH - 1 downto 0),
         DataFromModel(AXI_DATA_WIDTH - 1 downto 0)
     );
-    signal SpiRec      : SpiRecType;
-    signal spi_sck     : std_logic;     -- SPI clock
-    signal spi_ss_n    : std_logic;     -- SPI slave select (low active)
-    signal spi_mosi    : std_logic;     -- SPI master-out-slave-in
-    signal spi_miso    : std_logic;     -- SPI master-in-slave-out
-    signal axi_aclk    : std_logic;
-    signal axi_aresetn : std_logic;
+    signal SpiRec             : SpiRecType;
+    signal spi_sck            : std_logic; -- SPI clock
+    signal spi_ss_n           : std_logic; -- SPI slave select (low active)
+    signal spi_mosi           : std_logic; -- SPI master-out-slave-in
+    signal spi_miso           : std_logic; -- SPI master-in-slave-out
+    signal axi_aclk           : std_logic;
+    signal axi_aresetn        : std_logic;
+    signal s_axi_awvalid      : std_logic;
+    signal s_axi_awvalid_mask : std_logic := '1';
+    signal s_axi_arvalid      : std_logic;
+    signal s_axi_arvalid_mask : std_logic := '1';
 
 begin
 
@@ -167,7 +171,7 @@ begin
             axi_aresetn   => axi_aresetn,
             s_axi_awaddr  => Axi4LiteBus.WriteAddress.Addr,
             s_axi_awprot  => Axi4LiteBus.WriteAddress.Prot,
-            s_axi_awvalid => Axi4LiteBus.WriteAddress.Valid,
+            s_axi_awvalid => s_axi_awvalid, -- Axi4LiteBus.WriteAddress.Valid,
             s_axi_awready => Axi4LiteBus.WriteAddress.Ready,
             s_axi_wdata   => Axi4LiteBus.WriteData.Data,
             s_axi_wstrb   => Axi4LiteBus.WriteData.Strb,
@@ -175,7 +179,7 @@ begin
             s_axi_wready  => Axi4LiteBus.WriteData.Ready,
             s_axi_araddr  => Axi4LiteBus.ReadAddress.Addr,
             s_axi_arprot  => Axi4LiteBus.ReadAddress.Prot,
-            s_axi_arvalid => Axi4LiteBus.ReadAddress.Valid,
+            s_axi_arvalid => s_axi_arvalid,
             s_axi_arready => Axi4LiteBus.ReadAddress.Ready,
             s_axi_rdata   => Axi4LiteBus.ReadData.Data,
             s_axi_rresp   => Axi4LiteBus.ReadData.Resp,
@@ -186,24 +190,12 @@ begin
             s_axi_bready  => Axi4LiteBus.WriteResponse.Ready
         );
 
-    ------------------------------------------------------------------------------------------------
-    -- AXI4 lite subordinate verification component
-    ------------------------------------------------------------------------------------------------
+    Axi4LiteBus.WriteAddress.Valid <= s_axi_awvalid and s_axi_awvalid_mask;
+    Axi4LiteBus.ReadAddress.Valid  <= s_axi_arvalid and s_axi_arvalid_mask;
 
-    --    axi4lite_sub_inst : entity osvvm_axi4.Axi4LiteSubordinate
-    --        generic map(
-    --            MODEL_ID_NAME => "AXI4 subordinate",
-    --            tperiod_Clk   => AXI_CLK_PERIOD
-    --        )
-    --        port map(
-    --            -- Globals
-    --            Clk      => axi_aclk,
-    --            nReset   => axi_aresetn,
-    --            -- AXI Manager Functional Interface
-    --            AxiBus   => Axi4LiteBus,
-    --            -- Testbench Transaction Interface
-    --            TransRec => Axi4SubRec
-    --        );
+    ------------------------------------------------------------------------------------------------
+    -- AXI4 lite memory verification component
+    ------------------------------------------------------------------------------------------------
 
     axi4lite_memory_inst : entity osvvm_axi4.Axi4LiteMemory
         generic map(

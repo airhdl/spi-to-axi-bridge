@@ -141,11 +141,11 @@ architecture rtl of spi2axi is
     signal s_axi_awvalid_int : std_logic                     := '0';
     signal s_axi_wvalid_int  : std_logic                     := '0';
     signal axi_fsm_reset     : std_logic                     := '1';
-    signal axi_areset        : std_logic;
 
     -- Unregistered signals
     signal spi_sck_sync  : std_logic;
     signal spi_ss_n_sync : std_logic;
+    signal axi_areset    : std_logic;
 
 begin
 
@@ -182,9 +182,6 @@ begin
     ------------------------------------------------------------------------------------------------
     -- SPI receive/transmit state machine
     ------------------------------------------------------------------------------------------------
-
-    -- CPOL = 0 -> leading edge = rising edge
-    -- CPHA = 0 -> data captured on leading edge of clock cycle
 
     spi_fsm : process(axi_aclk) is
         variable spi_rx_bit_idx  : natural range 0 to 7                      := 0;

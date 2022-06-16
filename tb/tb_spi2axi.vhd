@@ -42,6 +42,10 @@ library osvvm_axi4;
 context osvvm_axi4.Axi4LiteContext;
 
 entity tb_spi2axi is
+    generic(
+        SPI_CPOL : natural range 0 to 1 := 0; -- SPI clock polarity
+        SPI_CPHA : natural range 0 to 1 := 0 -- SPI clock phase
+    );
 end entity tb_spi2axi;
 
 architecture TestHarness of tb_spi2axi is
@@ -51,13 +55,17 @@ architecture TestHarness of tb_spi2axi is
     -------------------------------------------------------------------------------
 
     component tb_spi2axi_testctrl is
+        generic(
+            SPI_CPOL : natural range 0 to 1; -- SPI clock polarity
+            SPI_CPHA : natural range 0 to 1 -- SPI clock phase
+        );
         port(
             -- Record Interfaces
-            SpiRec     : InOut SpiRecType;
-            Axi4MemRec : Inout AddressBusRecType;
+            SpiRec     : inout SpiRecType;
+            Axi4MemRec : inout AddressBusRecType;
             -- Global Signal Interface
-            Clk        : In    std_logic;
-            nReset     : In    std_logic
+            Clk        : in    std_logic;
+            nReset     : in    std_logic
         );
     end component;
 
@@ -65,13 +73,11 @@ architecture TestHarness of tb_spi2axi is
     -- Constants
     ------------------------------------------------------------------------------------------------
 
-    constant SPI_CPOL       : natural range 0 to 1 := 0; -- SPI clock polarity
-    constant SPI_CPHA       : natural range 0 to 1 := 0; -- SPI clock phase
-    constant AXI_ADDR_WIDTH : integer              := 32; -- AXI address bus width, in bits
-    constant AXI_DATA_WIDTH : integer              := 32;
-    constant AXI_STRB_WIDTH : integer              := AXI_DATA_WIDTH / 8;
-    constant AXI_CLK_PERIOD : time                 := 10 ns;
-    constant TPD            : time                 := 2 ns;
+    constant AXI_ADDR_WIDTH : integer := 32; -- AXI address bus width, in bits
+    constant AXI_DATA_WIDTH : integer := 32;
+    constant AXI_STRB_WIDTH : integer := AXI_DATA_WIDTH / 8;
+    constant AXI_CLK_PERIOD : time    := 10 ns;
+    constant TPD            : time    := 2 ns;
 
     ------------------------------------------------------------------------------------------------
     -- Signals
@@ -96,9 +102,9 @@ architecture TestHarness of tb_spi2axi is
     signal axi_aclk           : std_logic;
     signal axi_aresetn        : std_logic;
     signal s_axi_awvalid      : std_logic;
-    signal s_axi_awvalid_mask : std_logic := '1';
+    signal s_axi_awvalid_mask : std_logic := '1'; -- @suppress "signal s_axi_awvalid_mask is never written"
     signal s_axi_arvalid      : std_logic;
-    signal s_axi_arvalid_mask : std_logic := '1';
+    signal s_axi_arvalid_mask : std_logic := '1'; -- @suppress "signal s_axi_arvalid_mask is never written"
 
 begin
 
@@ -128,6 +134,10 @@ begin
     ------------------------------------------------------------------------------------------------
 
     testctrl_inst : tb_spi2axi_testctrl
+        generic map(
+            SPI_CPOL => SPI_CPOL,
+            SPI_CPHA => SPI_CPHA
+        )
         port map(
             SpiRec     => SpiRec,
             Axi4MemRec => Axi4MemRec,

@@ -38,15 +38,17 @@ context OSVVM.OsvvmContext;
 library osvvm_spi;
 context osvvm_spi.SpiContext;
 
---use work.OsvvmTestCommonPkg.all;
-
 entity tb_spi2axi_testctrl is
+    generic(
+        SPI_CPOL : natural range 0 to 1; -- SPI clock polarity
+        SPI_CPHA : natural range 0 to 1 -- SPI clock phase
+    );
     port(
         -- Record Interfaces
-        SpiRec     : InOut SpiRecType;
-        Axi4MemRec : Inout AddressBusRecType;
+        SpiRec     : inout SpiRecType;
+        Axi4MemRec : inout AddressBusRecType;
         -- Global Signal Interface
-        Clk        : In    std_logic;
-        nReset     : In    std_logic
+        Clk        : in    std_logic;
+        nReset     : in    std_logic
     );
 end entity;

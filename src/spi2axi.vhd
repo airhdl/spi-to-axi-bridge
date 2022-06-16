@@ -125,6 +125,7 @@ architecture rtl of spi2axi is
     signal s_axi_awvalid_int : std_logic                     := '0';
     signal s_axi_wvalid_int  : std_logic                     := '0';
     signal axi_fsm_reset     : std_logic                     := '1';
+    signal axi_areset        : std_logic;
 
     -- Unregistered signals
     signal spi_sck_sync  : std_logic;
@@ -132,16 +133,19 @@ architecture rtl of spi2axi is
 
 begin
 
+    axi_areset <= not axi_aresetn;
+
     ------------------------------------------------------------------------------------------------
     -- SPI SCK synchronizer
     ------------------------------------------------------------------------------------------------
 
     spi_sck_sync_inst : entity work.synchronizer
         generic map(
-            G_INIT_VALUE => to_std_logic(SPI_CPOL)
+            G_INIT_VALUE    => to_std_logic(SPI_CPOL),
+            G_NUM_GUARD_FFS => 1
         )
         port map(
-            i_reset => '0',             -- REVIEW
+            i_reset => axi_areset,
             i_clk   => axi_aclk,
             i_data  => spi_sck,
             o_data  => spi_sck_sync
@@ -149,10 +153,11 @@ begin
 
     spi_ss_sync_inst : entity work.synchronizer
         generic map(
-            G_INIT_VALUE => to_std_logic(SPI_CPOL)
+            G_INIT_VALUE    => to_std_logic(SPI_CPOL),
+            G_NUM_GUARD_FFS => 1
         )
         port map(
-            i_reset => '0',             -- REVIEW
+            i_reset => axi_areset,
             i_clk   => axi_aclk,
             i_data  => spi_ss_n,
             o_data  => spi_ss_n_sync
@@ -165,11 +170,14 @@ begin
     -- CPOL = 0 -> leading edge = rising edge
     -- CPHA = 0 -> data captured on leading edge of clock cycle
 
-    spi_fsm : process(axi_aclk, axi_aresetn) is
+    spi_fsm : process(axi_aclk) is
         variable spi_rx_bit_idx  : natural range 0 to 7                      := 0;
         variable spi_rx_byte_idx : natural range 0 to SPI_FRAME_LENGTH_BYTES := 0;
         variable spi_tx_bit_idx  : natural range 0 to 7                      := 0;
         variable spi_tx_byte_idx : natural range 0 to SPI_FRAME_LENGTH_BYTES := 0;
+        variable spi_sck_re      : boolean;
+        variable spi_sck_fe      : boolean;
+        variable spi_tx_byte     : std_logic_vector(7 downto 0);
     begin
         if rising_edge(axi_aclk) then
             if axi_aresetn = '0' then
@@ -177,6 +185,7 @@ begin
                 spi_rx_byte_idx  := 0;
                 spi_tx_bit_idx   := 0;
                 spi_tx_byte_idx  := 0;
+                spi_tx_byte      := (others => '0');
                 spi_sck_sync_old <= to_std_logic(SPI_CPOL);
                 spi_rx_valid     <= '0';
                 spi_rx_cmd       <= (others => '0');
@@ -194,7 +203,6 @@ begin
                 case spi_state is
 
                     -- FIXME: detect/handle frame overruns
-                    -- FIXME: handle missing write response/read data/read response
 
                     ------------------------------------------------------------------------------------
                     -- Receive the 11-byte SPI frame
@@ -203,9 +211,15 @@ begin
                     when SPI_RECEIVE =>
                         if spi_ss_n_sync = '0' then
                             axi_fsm_reset <= '0';
-                            --
-                            -- SPI clock leading edge
-                            if spi_sck_sync = '1' and spi_sck_sync_old = '0' then
+
+                            spi_sck_re := spi_sck_sync = '1' and spi_sck_sync_old = '0';
+                            spi_sck_fe := spi_sck_sync = '0' and spi_sck_sync_old = '1';
+
+                            -- SPI clock sample edge
+                            if (SPI_CPOL = 0 and SPI_CPHA = 0 and spi_sck_re) or
+                                (SPI_CPOL = 0 and SPI_CPHA = 1 and spi_sck_fe) or
+                                (SPI_CPOL = 1 and SPI_CPHA = 0 and spi_sck_fe) or
+                                (SPI_CPOL = 1 and SPI_CPHA = 1 and spi_sck_re) then
                                 spi_rx_shreg <= spi_rx_shreg(spi_rx_shreg'high - 1 downto 0) & spi_mosi; -- assuming `spi_mosi` is steady and does not need a synchronizer
                                 --
                                 if spi_rx_bit_idx = 7 then
@@ -214,16 +228,25 @@ begin
                                 else
                                     spi_rx_bit_idx := spi_rx_bit_idx + 1;
                                 end if;
-                            -- SPI clock trailing edge
-                            elsif spi_sck_sync = '0' and spi_sck_sync_old = '1' then
-                                spi_tx_shreg <= spi_tx_shreg(spi_tx_shreg'high - 1 downto 0) & '0';
-                                --
-                                if spi_tx_bit_idx = 7 then
-                                    spi_tx_bit_idx  := 0;
-                                    spi_tx_byte_idx := spi_tx_byte_idx + 1;
-                                    spi_state       <= SPI_LOAD_TX_BYTE;
-                                else
+
+                            -- SPI clock drive edge
+                            elsif (SPI_CPOL = 0 and SPI_CPHA = 0 and spi_sck_fe) or
+                            (SPI_CPOL = 0 and SPI_CPHA = 1 and spi_sck_re) or
+                            (SPI_CPOL = 1 and SPI_CPHA = 0 and spi_sck_re) or 
+                            (SPI_CPOL = 1 and SPI_CPHA = 1 and spi_sck_fe) then
+                                if SPI_CPHA = 1 and spi_tx_bit_idx = 0 then
+                                    spi_tx_shreg   <= spi_tx_byte;
                                     spi_tx_bit_idx := spi_tx_bit_idx + 1;
+                                else
+                                    spi_tx_shreg <= spi_tx_shreg(spi_tx_shreg'high - 1 downto 0) & '0';
+                                    --
+                                    if spi_tx_bit_idx = 7 then
+                                        spi_tx_bit_idx  := 0;
+                                        spi_tx_byte_idx := spi_tx_byte_idx + 1;
+                                        spi_state       <= SPI_LOAD_TX_BYTE;
+                                    else
+                                        spi_tx_bit_idx := spi_tx_bit_idx + 1;
+                                    end if;
                                 end if;
                             end if;
                         else
@@ -231,6 +254,7 @@ begin
                             spi_rx_byte_idx := 0;
                             spi_tx_bit_idx  := 0;
                             spi_tx_byte_idx := 0;
+                            spi_tx_byte     := (others => '0');
                             axi_fsm_reset   <= '1';
                         end if;
 
@@ -255,6 +279,7 @@ begin
                                     null; -- don't care
                                 end if;
                             else        -- CMD_READ
+                                assert spi_rx_cmd = CMD_READ report "unsupported command" severity failure;
                                 if spi_rx_byte_idx <= 4 then
                                     spi_rx_addr <= spi_rx_addr(23 downto 0) & spi_rx_shreg;
                                     --
@@ -275,36 +300,42 @@ begin
                     -- Load the next SPI transmit byte
                     ------------------------------------------------------------------------------------
                     when SPI_LOAD_TX_BYTE =>
+                        spi_tx_byte := (others => '0'); -- default
+                        --
                         if spi_rx_cmd = CMD_WRITE then
                             if spi_tx_byte_idx = 10 then
                                 -- Write status byte:
                                 -- [7:3] reserved
                                 -- [2]   timeout
                                 -- [1:0] BRESP                                
-                                spi_tx_shreg                  <= (others => '0');
-                                spi_tx_shreg(2)               <= not axi_bresp_valid;
-                                spi_tx_shreg(axi_bresp'range) <= axi_bresp;
+                                spi_tx_byte                  := (others => '0');
+                                spi_tx_byte(2)               := not axi_bresp_valid;
+                                spi_tx_byte(axi_bresp'range) := axi_bresp;
                             end if;
                         else            -- CMD_READ
                             if spi_tx_byte_idx <= 5 then
                                 null;
                             elsif spi_tx_byte_idx = 6 then
-                                spi_tx_shreg <= axi_rdata(31 downto 24);
+                                spi_tx_byte := axi_rdata(31 downto 24);
                             elsif spi_tx_byte_idx = 7 then
-                                spi_tx_shreg <= axi_rdata(23 downto 16);
+                                spi_tx_byte := axi_rdata(23 downto 16);
                             elsif spi_tx_byte_idx = 8 then
-                                spi_tx_shreg <= axi_rdata(15 downto 8);
+                                spi_tx_byte := axi_rdata(15 downto 8);
                             elsif spi_tx_byte_idx = 9 then
-                                spi_tx_shreg <= axi_rdata(7 downto 0);
+                                spi_tx_byte := axi_rdata(7 downto 0);
                             else
                                 -- Read status byte:
                                 -- [7:3] reserved
                                 -- [2]   timeout
                                 -- [1:0] RRESP
-                                spi_tx_shreg             <= (others => '0');
-                                spi_tx_shreg(2)          <= not axi_rdata_valid;
-                                spi_tx_shreg(1 downto 0) <= axi_rresp;
+                                spi_tx_byte             := (others => '0');
+                                spi_tx_byte(2)          := not axi_rdata_valid;
+                                spi_tx_byte(1 downto 0) := axi_rresp;
                             end if;
+                        end if;
+                        --
+                        if SPI_CPHA = 0 then
+                            spi_tx_shreg <= spi_tx_byte;
                         end if;
                         --
                         spi_state <= SPI_RECEIVE;
@@ -351,18 +382,20 @@ begin
                             axi_rdata_valid <= '0';
                             --
                             if spi_rx_cmd = CMD_WRITE then
-                                s_axi_awvalid_int <= '1';
-                                s_axi_awaddr      <= spi_rx_addr;
-                                s_axi_awprot      <= (others => '0'); -- unpriviledged, secure data access
-                                s_axi_wvalid_int  <= '1';
-                                s_axi_wdata       <= spi_rx_wdata;
-                                s_axi_wstrb       <= (others => '1');
-                                axi_state         <= AXI_WRITE_ACK;
+                                s_axi_awvalid_int         <= '1';
+                                s_axi_awaddr              <= (others => '0');
+                                s_axi_awaddr(31 downto 0) <= spi_rx_addr;
+                                s_axi_awprot              <= (others => '0'); -- unpriviledged, secure data access
+                                s_axi_wvalid_int          <= '1';
+                                s_axi_wdata               <= spi_rx_wdata;
+                                s_axi_wstrb               <= (others => '1');
+                                axi_state                 <= AXI_WRITE_ACK;
                             else
-                                s_axi_arvalid <= '1';
-                                s_axi_araddr  <= spi_rx_addr;
-                                s_axi_arprot  <= (others => '0'); -- unpriviledged, secure data access
-                                axi_state     <= AXI_READ_ADDR_ACK;
+                                s_axi_arvalid             <= '1';
+                                s_axi_araddr              <= (others => '0');
+                                s_axi_araddr(31 downto 0) <= spi_rx_addr;
+                                s_axi_arprot              <= (others => '0'); -- unpriviledged, secure data access
+                                axi_state                 <= AXI_READ_ADDR_ACK;
                             end if;
                         end if;
 

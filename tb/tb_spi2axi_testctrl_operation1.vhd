@@ -162,6 +162,8 @@ begin
         wait until nReset = '1';
         ClearAlerts;
 
+        SetCPHA(SpiRec, SPI_CPHA);
+
         Log("Testing normal SPI write");
         addr  := x"76543210";
         wdata := x"12345678";
@@ -177,8 +179,8 @@ begin
         wdata := x"12345678";
         SetAxi4Options(Axi4MemRec, BRESP, 2); -- SLVERR
         spi_write(addr, wdata, status);
-        AlertIf(status(2) /= '0', "unexpected timeout");
-        AlertIf(status(1 downto 0) /= "10", "unexpected write response");
+        AffirmIfEqual(status(2), '0', "Timeout");
+        AffirmIfEqual(status(1 downto 0), "10", "Write response");
         SetAxi4Options(Axi4MemRec, BRESP, 0);
 
         Log("Testing SPI write timeout");
@@ -221,7 +223,7 @@ begin
 
 end architecture operation1;
 
-Configuration operation1_cfg of tb_spi2axi is
+configuration operation1_cfg of tb_spi2axi is
     for TestHarness
         for testctrl_inst : tb_spi2axi_testctrl
             use entity work.tb_spi2axi_testctrl(operation1);

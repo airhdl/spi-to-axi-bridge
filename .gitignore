@@ -1,0 +1,3 @@
+sim/**/*.*
+!sim/*.do
+!sim/*.pro

@@ -3,7 +3,7 @@
 --  SPI to AXI4-Lite Bridge, test controller entity declaration 
 --
 --  Description:  
---    Normal operation testcase
+--    SPI overrun testcase
 --
 --  Author(s):
 --    Guy Eschemann, guy@airhdl.com
@@ -37,7 +37,7 @@ use osvvm.ScoreboardPkg_slv.all;
 library osvvm_axi4;
 use osvvm_axi4.Axi4OptionsPkg.all;
 
-architecture operation1 of tb_spi2axi_testctrl is
+architecture overrun of tb_spi2axi_testctrl is
 
     -------------------------------------------------------------------------------
     -- Constants
@@ -136,18 +136,16 @@ begin
             status             := std_logic_vector(to_unsigned(rx_bytes(10), 8));
         end procedure;
 
-        variable addr    : unsigned(31 downto 0);
-        variable wdata   : std_logic_vector(31 downto 0);
-        variable rdata   : std_logic_vector(31 downto 0);
-        variable mem_reg : std_logic_vector(31 downto 0);
-        variable status  : std_logic_vector(7 downto 0);
-
-        alias s_axi_awvalid_mask is << signal .tb_spi2axi.s_axi_awvalid_mask : std_logic >>;
-        alias s_axi_arvalid_mask is << signal .tb_spi2axi.s_axi_arvalid_mask : std_logic >>;
+        variable addr     : unsigned(31 downto 0);
+        variable wdata    : std_logic_vector(31 downto 0);
+        variable mem_reg  : std_logic_vector(31 downto 0);
+        variable status   : std_logic_vector(7 downto 0);
+        variable tx_bytes : integer_vector(0 to SPI_PACKET_LENGTH_BYTES);
+        variable rx_bytes : integer_vector(0 to SPI_PACKET_LENGTH_BYTES); -- @suppress "variable rx_bytes is never read"
 
     begin
         -- Initialization of test
-        SetAlertLogName("tb_spi2axi_operation1");
+        SetAlertLogName("tb_spi2axi_overrun");
         SetLogEnable(INFO, TRUE);
         SetLogEnable(DEBUG, FALSE);
         SetLogEnable(PASSED, FALSE);
@@ -165,6 +163,10 @@ begin
 
         wait for 1 us;
 
+        Log("Testing 12-byte SPI write");
+        tx_bytes := (others => 0);
+        spi_process(tx_bytes, rx_bytes);
+
         Log("Testing normal SPI write");
         addr  := x"76543210";
         wdata := x"12345678";
@@ -175,48 +177,6 @@ begin
         Read(Axi4MemRec, std_logic_vector(addr), mem_reg);
         AffirmIfEqual(mem_reg, wdata, "Memory data word: ");
 
-        Log("Testing SPI write with SLVERR response");
-        addr  := x"76543210";
-        wdata := x"12345678";
-        SetAxi4Options(Axi4MemRec, BRESP, 2); -- SLVERR
-        spi_write(addr, wdata, status);
-        AffirmIfEqual(status(2), '0', "Timeout");
-        AffirmIfEqual(status(1 downto 0), "10", "Write response");
-        SetAxi4Options(Axi4MemRec, BRESP, 0);
-
-        Log("Testing SPI write timeout");
-        s_axi_awvalid_mask <= force '0';
-        addr               := x"76543210";
-        wdata              := x"12345678";
-        spi_write(addr, wdata, status);
-        AffirmIfEqual('1', status(2), "timeout");
-        s_axi_awvalid_mask <= release;
-
-        Log("Testing normal SPI read");
-        addr  := x"12345678";
-        wdata := x"12345678";
-        Write(Axi4MemRec, std_logic_vector(addr), wdata);
-        spi_read(addr, rdata, status);
-        AffirmIfEqual(rdata, wdata, "read data");
-        AffirmIfEqual('0', status(2), "timeout");
-        AffirmIfEqual("00", status(1 downto 0), "read response");
-
-        Log("Testing SPI read with DECERR response");
-        addr  := x"12345678";
-        wdata := x"12345678";
-        SetAxi4Options(Axi4MemRec, RRESP, 3); -- DECERR
-        spi_read(addr, rdata, status);
-        AffirmIfEqual(rdata, wdata, "read data");
-        AffirmIfEqual('0', status(2), "timeout");
-        AffirmIfEqual("11", status(1 downto 0), "read response");
-        SetAxi4Options(Axi4MemRec, RRESP, 0);
-
-        Log("Testing SPI read timeout");
-        s_axi_arvalid_mask <= force '0';
-        spi_read(addr, rdata, status);
-        AffirmIfEqual('1', status(2), "timeout");
-        s_axi_arvalid_mask <= release;
-
         wait for 1 us;
 
         EndOfTestReports;
@@ -224,12 +184,12 @@ begin
         wait;
     end process ControlProc;
 
-end architecture operation1;
+end architecture overrun;
 
-configuration operation1_cfg of tb_spi2axi is
+configuration overrun_cfg of tb_spi2axi is
     for TestHarness
         for testctrl_inst : tb_spi2axi_testctrl
-            use entity work.tb_spi2axi_testctrl(operation1);
+            use entity work.tb_spi2axi_testctrl(overrun);
         end for;
     end for;
-end operation1_cfg;
+end overrun_cfg;

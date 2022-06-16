@@ -202,8 +202,6 @@ begin
 
                 case spi_state is
 
-                    -- FIXME: detect/handle frame overruns
-
                     ------------------------------------------------------------------------------------
                     -- Receive the 11-byte SPI frame
                     --  * SPI bytes are received MSB-first
@@ -224,7 +222,10 @@ begin
                                 --
                                 if spi_rx_bit_idx = 7 then
                                     spi_rx_bit_idx := 0;
-                                    spi_state      <= SPI_PROCESS_RX_BYTE;
+                                    --
+                                    if spi_rx_byte_idx < SPI_FRAME_LENGTH_BYTES then -- in case of SPI overrun, stop processing receive bytes
+                                        spi_state <= SPI_PROCESS_RX_BYTE;
+                                    end if;
                                 else
                                     spi_rx_bit_idx := spi_rx_bit_idx + 1;
                                 end if;
@@ -241,9 +242,12 @@ begin
                                     spi_tx_shreg <= spi_tx_shreg(spi_tx_shreg'high - 1 downto 0) & '0';
                                     --
                                     if spi_tx_bit_idx = 7 then
-                                        spi_tx_bit_idx  := 0;
-                                        spi_tx_byte_idx := spi_tx_byte_idx + 1;
-                                        spi_state       <= SPI_LOAD_TX_BYTE;
+                                        spi_tx_bit_idx := 0;
+                                        --
+                                        if spi_tx_byte_idx < SPI_FRAME_LENGTH_BYTES - 1 then -- in case of SPI overrun, stop loading transmit bytes
+                                            spi_tx_byte_idx := spi_tx_byte_idx + 1;
+                                            spi_state       <= SPI_LOAD_TX_BYTE;
+                                        end if;
                                     else
                                         spi_tx_bit_idx := spi_tx_bit_idx + 1;
                                     end if;
@@ -339,6 +343,7 @@ begin
                         end if;
                         --
                         spi_state <= SPI_RECEIVE;
+
                 end case;
             end if;
         end if;

@@ -163,6 +163,9 @@ begin
         ClearAlerts;
 
         SetCPHA(SpiRec, SPI_CPHA);
+        SetCPOL(SpiRec, SPI_CPOL);
+
+        wait for 1 us;
 
         Log("Testing normal SPI write");
         addr  := x"76543210";
@@ -215,6 +218,8 @@ begin
         spi_read(addr, rdata, status);
         AffirmIfEqual('1', status(2), "timeout");
         s_axi_arvalid_mask <= release;
+
+        wait for 1 us;
 
         EndOfTestReports;
         std.env.stop;

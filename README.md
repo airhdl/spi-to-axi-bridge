@@ -6,10 +6,6 @@ An SPI to AXI4-lite bridge for accessing AXI4-lite register banks, such as the o
 
 Thanks to Jim Lewis of SynthWorks Design Inc. for the OSVVM support, and to Sigasi for providing a Sigasi Studio XPRT license.  
 
-## Current Limitations
-
-* Only supports SPI modes 0 and 1
-
 ## SPI Modes
 
 The SPI to AXI4-Lite bridge supports different SPI modes, as defined in the table below.

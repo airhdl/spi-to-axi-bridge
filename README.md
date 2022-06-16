@@ -4,9 +4,13 @@ An SPI to AXI4-lite bridge for accessing AXI4-lite register banks, such as the o
 
 ## Acknowledgments
 
-Thanks to Jim Lewis of SynthWorks Design Inc. for the OSVVM support, and to Sigasi for providing a Sigasi Studio XPRT license.  
+Thanks to Jim Lewis of SynthWorks Design Inc. for the OSVVM support, and to Sigasi for providing a Sigasi Studio XPRT license, which was a great help for developing the core.  
 
-## SPI Modes
+## Using the Core
+
+The SPI to AXI4-lite bridge comes a single, self-contained VHDL file.
+
+### SPI Modes
 
 The SPI to AXI4-Lite bridge supports different SPI modes, as defined in the table below.
 
@@ -22,9 +26,9 @@ Notes:
 * All SPI bytes are transferred MSB-first.
 * The SPI mode is configured statically using the component's `SPI_CPOL` and `SPI_CPHA` generic parameters.
 
-## SPI Transactions
+### SPI Transactions
 
-### Write Data Transactions
+#### Write Data Transactions
 
 Write transactions write a 32-bit data word to an AXI4-Lite register at a given address. SPI write transactions have a total length of 11 bytes. The first byte, which is the `instruction` byte, must have a value of `0x00` to initiate a write transaction. It is followed by the 4 address bytes and the 4 data bytes which are all transmitted high-byte first.
 
@@ -51,7 +55,7 @@ AXI4 write response codes:
 | `0b10`     | `SLVERR` | Slave error |
 | `0b11`     | `DECERR` | Decode error |
 
-### Read Data Transactions
+#### Read Data Transactions
 
 Read transactions read a 32-bit data word from an AXI4-Lite register at a given address. SPI read transactions have a total length of 11 bytes. The first byte, which is the `instruction` byte, must have a value of `0x01` to initiate a read transaction. It is followed by the 4 address bytes, plus a `dummy` byte which gives time to the bridge to perform the AXI4-Lite read transaction. The read data word appears on the `MISO` line following the transmission of the `dummy` byte.
 

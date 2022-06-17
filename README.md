@@ -4,7 +4,10 @@ An SPI to AXI4-lite bridge for accessing AXI4-lite register banks, such as the o
 
 ## Acknowledgments
 
-Huge thanks to **Jim Lewis** of [SynthWorks Design Inc.](https://www.synthworks.com/) for the OSVVM support, and to **[Sigasi](https://www.sigasi.com/)** for providing a Sigasi Studio XPRT license, which was a great help for developing the core.  
+Many thanks to:
+
+* **Jim Lewis** of [SynthWorks Design Inc.](https://www.synthworks.com/) for the OSVVM support.
+* **[Sigasi](https://www.sigasi.com/)** for providing a Sigasi Studio XPRT license, which was of great help for developing the core.  
 
 ## Using the Core
 

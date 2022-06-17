@@ -8,7 +8,10 @@ Huge thanks to **Jim Lewis** of [SynthWorks Design Inc.](https://www.synthworks.
 
 ## Using the Core
 
-The SPI to AXI4-lite bridge comes a single, self-contained VHDL file.
+The SPI to AXI4-lite bridge comes as single, self-contained file. It is available in both VHDL and SystemVerilog versions:
+
+* VHDL version: `/src/spi2axi.vhd`
+* SystemVerilog version: `/src/spi2axi.sv`
 
 ### SPI Modes
 

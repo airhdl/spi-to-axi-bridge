@@ -16,7 +16,7 @@ The SPI to AXI4-lite bridge comes as single, self-contained file for easy integr
 The SPI to AXI4-Lite bridge supports all four SPI modes, as defined in the following table:
 
 | Mode | Clock polarity (CPOL) | Clock Phase (CPHA) | Description |
-| -----| --------------------- | ------------------ | ----------- |
+| :---:| :-------------------: | :----------------: | ----------- |
 | 0    | 0 | 0 | Idle clock level is `0`, data captured on leading (rising) clock edge. |
 | 1    | 0 | 1 | Idle clock level is `0`, data captured on trailing (falling) clock edge |
 | 2    | 1 | 0 | Idle clock level is `1`, data captured on leading (falling) clock edge. |
@@ -34,7 +34,7 @@ Notes:
 Write transactions write a 32-bit data word to an AXI4-Lite register at a given address. SPI write transactions have a total length of 11 bytes. The first byte, which is the `instruction` byte, must have a value of `0x00` to initiate a write transaction. It is followed by the 4 address bytes and the 4 data bytes which are all transmitted high-byte first.
 
 | Byte | MOSI    | MISO | Comment |
-| ---- | ------- | ---- | ------- |
+| :---: | ------- | ---- | ------- |
 | 0    | `0x00` | `0x00` | Signals a write transaction |
 | 1    | `address[31:24]` | `0x00` | Write address (high byte) |
 | 2    | `address[23:16]` | `0x00` | Write address |
@@ -61,7 +61,7 @@ AXI4 write response codes:
 Read transactions read a 32-bit data word from an AXI4-Lite register at a given address. SPI read transactions have a total length of 11 bytes. The first byte, which is the `instruction` byte, must have a value of `0x01` to initiate a read transaction. It is followed by the 4 address bytes, plus a `dummy` byte which gives time to the bridge to perform the AXI4-Lite read transaction. The read data word appears on the `MISO` line following the transmission of the `dummy` byte.
 
 | Byte | MOSI    | MISO | Comment |
-| ---- | ------- | ---- | ------- |
+| :---: | ------- | ---- | ------- |
 | 0    | `0x01` | `0x00` | Signals a read transaction |
 | 1    | `address[31:24]` | `0x00` | Read address (high byte) |
 | 2    | `address[23:16]` | `0x00` | Read address |

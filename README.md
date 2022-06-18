@@ -6,14 +6,14 @@ An SPI to AXI4-lite bridge for accessing AXI4-lite register banks, such as the o
 
 ## Using the Core
 
-The SPI to AXI4-lite bridge comes as single, self-contained file. It is available in both VHDL and SystemVerilog versions:
+The SPI to AXI4-lite bridge comes as single, self-contained file for easy integration into your design. It is available in both **VHDL** and **SystemVerilog** versions:
 
 * VHDL version: `/src/spi2axi.vhd`
 * SystemVerilog version: `/src/spi2axi.sv`
 
 ### SPI Modes
 
-The SPI to AXI4-Lite bridge supports different SPI modes, as defined in the table below.
+The SPI to AXI4-Lite bridge supports all four SPI modes, as defined in the following table:
 
 | Mode | Clock polarity (CPOL) | Clock Phase (CPHA) | Description |
 | -----| --------------------- | ------------------ | ----------- |
@@ -87,7 +87,7 @@ AXI4 read response codes:
 
 The design verification is based on an OSVVM VHDL test suite. Running the test suite requires a VHDL-2008 capable simulator such as Aldec Riviera-Pro.
 
-To run the test suite, please execute the following commands in the simulator console:
+To run the test suite, execute the following commands in the simulator console:
 
 ```
 cd sim

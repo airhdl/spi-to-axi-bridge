@@ -1,3 +1,5 @@
 sim/**/*.*
 !sim/*.do
 !sim/*.pro
+
+*.~vsd

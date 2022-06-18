@@ -186,10 +186,10 @@ begin
 
 end architecture overrun;
 
-configuration overrun_cfg of tb_spi2axi is
+configuration tb_spi2axi_overrun of tb_spi2axi is
     for TestHarness
         for testctrl_inst : tb_spi2axi_testctrl
             use entity work.tb_spi2axi_testctrl(overrun);
         end for;
     end for;
-end overrun_cfg;
+end tb_spi2axi_overrun;

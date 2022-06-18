@@ -42,7 +42,7 @@ module spi2axi #( // @suppress "File contains multiple design units"
     output wire spi_miso, // SPI master-in-slave-out
     // Clock and Reset
     input wire axi_aclk,
-    output wire axi_aresetn,
+    input wire axi_aresetn,
     // AXI Write Address Channel
     output wire [AXI_ADDR_WIDTH - 1:0] s_axi_awaddr,
     output wire [2:0] s_axi_awprot, // sigasi @suppress "Unused port"
@@ -127,7 +127,9 @@ module spi2axi #( // @suppress "File contains multiple design units"
     logic  spi_ss_n_sync;
     logic  axi_areset;
 
-    assign axi_areset = !axi_aresetn;
+    //----------------------------------------------------------------------------------------------
+
+    assign axi_areset = ~axi_aresetn;
 
     //----------------------------------------------------------------------------------------------
     // SPI SCK synchronizer

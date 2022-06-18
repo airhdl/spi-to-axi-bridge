@@ -37,7 +37,7 @@ use osvvm.ScoreboardPkg_slv.all;
 library osvvm_axi4;
 use osvvm_axi4.Axi4OptionsPkg.all;
 
-architecture operation1 of tb_spi2axi_testctrl is
+architecture operation of tb_spi2axi_testctrl is
 
     -------------------------------------------------------------------------------
     -- Constants
@@ -147,7 +147,7 @@ begin
 
     begin
         -- Initialization of test
-        SetAlertLogName("tb_spi2axi_operation1");
+        SetAlertLogName("tb_spi2axi_operation");
         SetLogEnable(INFO, TRUE);
         SetLogEnable(DEBUG, FALSE);
         SetLogEnable(PASSED, FALSE);
@@ -169,11 +169,11 @@ begin
         addr  := x"76543210";
         wdata := x"12345678";
         spi_write(addr, wdata, status);
-        AlertIf(status(2) /= '0', "unexpected timeout");
-        AlertIf(status(1 downto 0) /= "00", "unexpected write response");
+        AffirmIfEqual(status(2), '0', "timeout");
+        AffirmIfEqual(status(1 downto 0), "00", "write response");
 
         Read(Axi4MemRec, std_logic_vector(addr), mem_reg);
-        AffirmIfEqual(mem_reg, wdata, "Memory data word: ");
+        AffirmIfEqual(mem_reg, wdata, "memory data word");
 
         Log("Testing SPI write with SLVERR response");
         addr  := x"76543210";
@@ -224,12 +224,12 @@ begin
         wait;
     end process ControlProc;
 
-end architecture operation1;
+end architecture operation;
 
-configuration operation1_cfg of tb_spi2axi is
+configuration tb_spi2axi_operation of tb_spi2axi is
     for TestHarness
         for testctrl_inst : tb_spi2axi_testctrl
-            use entity work.tb_spi2axi_testctrl(operation1);
+            use entity work.tb_spi2axi_testctrl(operation);
         end for;
     end for;
-end operation1_cfg;
+end tb_spi2axi_operation;

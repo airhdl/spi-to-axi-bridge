@@ -88,3 +88,17 @@ AXI4 read response codes:
 | `0b10`     | `SLVERR` | Slave error |
 | `0b11`     | `DECERR` | Decode error |
 
+## Design Verification
+
+The design verification is based on an OSVVM VHDL test suite. Running the test suite requires a VHDL-2008 capable simulator such as Aldec Riviera-Pro.
+
+To run the test suite, please execute the following commands in the simulator console:
+
+```
+cd sim
+source ../lib/OsvvmLibraries/Scripts/StartUp.tcl
+build ../lib/OsvvmLibraries
+build ../lib/SPI
+build ../RunAllTests.pro
+```
+

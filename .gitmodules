@@ -3,4 +3,4 @@
 	url = https://github.com/OSVVM/OsvvmLibraries.git
 [submodule "lib/SPI"]
 	path = lib/SPI
-	url = ../../noasic/SPI.git
+	url = https://github.com/noasic/SPI.git

@@ -421,25 +421,33 @@ begin
                     -- AXI write: wait for write address and data acknowledge
                     --------------------------------------------------------------------------------
                     when AXI_WRITE_ACK =>
-                        if s_axi_awready = '1' then
+                        if s_axi_awready = '1' and s_axi_wready = '1' then
                             s_axi_awvalid_int <= '0';
-                            --
-                            if s_axi_wvalid_int = '0' then
-                                s_axi_bready <= '1';
-                                axi_state    <= AXI_WRITE_BRESP; -- move on when both write address and data have been acknowledged
-                            end if;
-                        end if;
-                        --
-                        if s_axi_wready = '1' then
                             s_axi_wvalid_int <= '0';
                             s_axi_wstrb      <= (others => '0');
+                            
+                             s_axi_bready <= '1';
+                             axi_state    <= AXI_WRITE_BRESP; -- move on when both write address and data have been acknowledged
+                        else
+                            if s_axi_awready = '1' then
+                                s_axi_awvalid_int <= '0';
+                                --
+                                if s_axi_wvalid_int = '0' then
+                                    s_axi_bready <= '1';
+                                    axi_state    <= AXI_WRITE_BRESP; -- move on when both write address and data have been acknowledged
+                                end if;
+                            end if;
                             --
-                            if s_axi_awvalid_int = '0' then
-                                s_axi_bready <= '1';
-                                axi_state    <= AXI_WRITE_BRESP; -- move on when both write address and data have been acknowledged
+                            if s_axi_wready = '1' then
+                                s_axi_wvalid_int <= '0';
+                                s_axi_wstrb      <= (others => '0');
+                                --
+                                if s_axi_awvalid_int = '0' then
+                                    s_axi_bready <= '1';
+                                    axi_state    <= AXI_WRITE_BRESP; -- move on when both write address and data have been acknowledged
+                                end if;
                             end if;
                         end if;
-
                     --------------------------------------------------------------------------------
                     -- AXI write: wait for write response
                     --------------------------------------------------------------------------------

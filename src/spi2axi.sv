@@ -402,22 +402,32 @@ module spi2axi #( // @suppress "File contains multiple design units"
                 // AXI write: wait for write address and data acknowledge
                 //------------------------------------------------------------------------------
                 AXI_WRITE_ACK : begin
-                    if (s_axi_awready == 1'b1) begin
-                        s_axi_awvalid_int <= 1'b0;
-                        //
-                        if (s_axi_wvalid_int == 1'b0) begin
-                            s_axi_bready_int <= 1'b1;
-                            axi_state    <= AXI_WRITE_BRESP; // move on when both write address and data have been acknowledged
+                    if (s_axi_awready == 1'b1 && s_axi_wready == 1'b1) begin
+                         s_axi_awvalid_int <= 1'b0;
+                         s_axi_wvalid_int <= 1'b0;
+                         s_axi_wstrb_int      <= '0;
+                         
+                         s_axi_bready_int <= 1'b1;
+                         axi_state    <= AXI_WRITE_BRESP; // move on when both write address and data have been acknowledged
+                    end 
+                    else begin
+                        if (s_axi_awready == 1'b1) begin
+                            s_axi_awvalid_int <= 1'b0;
+                            //
+                            if (s_axi_wvalid_int == 1'b0) begin
+                                s_axi_bready_int <= 1'b1;
+                                axi_state    <= AXI_WRITE_BRESP; // move on when both write address and data have been acknowledged
+                            end
                         end
-                    end
-                    //
-                    if (s_axi_wready == 1'b1) begin
-                        s_axi_wvalid_int <= 1'b0;
-                        s_axi_wstrb_int      <= '0;
                         //
-                        if (s_axi_awvalid_int == 1'b0) begin
-                            s_axi_bready_int <= 1'b1;
-                            axi_state    <= AXI_WRITE_BRESP; // move on when both write address and data have been acknowledged
+                        if (s_axi_wready == 1'b1) begin
+                            s_axi_wvalid_int <= 1'b0;
+                            s_axi_wstrb_int      <= '0;
+                            //
+                            if (s_axi_awvalid_int == 1'b0) begin
+                                s_axi_bready_int <= 1'b1;
+                                axi_state    <= AXI_WRITE_BRESP; // move on when both write address and data have been acknowledged
+                            end
                         end
                     end
                 end
